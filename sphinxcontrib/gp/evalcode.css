@@ -1,0 +1,108 @@
+#codeshell {
+    position: relative;
+    margin: 0pt;
+    padding-bottom: 15pt;
+}
+#codeshell pre,button {
+    outline: none;
+    margin: 0pt;
+}
+#codeshell div {
+    position: relative;
+}
+#codeshell pre#output {
+    background: #fcfcfc;
+    border: dotted 1px #ccc;
+}
+#codeshell pre#print {
+}
+#codeshell pre#input {
+    background: #f5f5f5;
+    border-left: solid 2px #c44;
+}
+#codeshell pre#input.done {
+    border-left: solid 2px #48c;
+}
+#codeshell button {
+    border-width: 0;
+    border-style: none;
+    display: block;
+    padding: 3px;
+    visibility: hidden;
+    background: #f5f5f5;
+    z-index: 2;
+}
+#codeshell button::before {
+    content: attr(data-tip) ;
+    font-size: 10px;
+    position:absolute;
+    z-index: 999;
+    white-space:nowrap;
+    bottom:9999px;
+    right: -1px;
+    background:#000;
+    color:#eee;
+    padding:0px 7px;
+    line-height: 24px;
+    height: 24px;
+    opacity: 0;
+    transition:opacity 0.4s ease-out;
+}
+#codeshell button:hover::before {
+    opacity: 1;
+    bottom: -25px;
+}
+#codeshell:hover > button {
+    cursor: pointer;
+    visibility: visible;
+}
+#codeshell div:hover > button {
+    cursor: pointer;
+    visibility: visible;
+}
+#codeshell:hover button:hover {
+    background: #eee;
+}
+#codeshell button.eval {
+    /*border-width: 0;*/
+    color: #c44;
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    /*border-radius: 3px;*/
+    /*border: solid 1px #c44;*/
+}
+#codeshell button.insert {
+    position: absolute;
+    right: 0px;
+    bottom: -1px;
+    color: #bbb;
+    /*top: 0px;*/
+}
+#codeshell button.kill {
+    position: absolute;
+    right: -1px;
+    top: 0px;
+    color: #bbb;
+}
+#codeshell button.eval:after { content: " ▶ "; /* C^v u 25b6 */ }
+#codeshell button.insert:after { content: " ＋ "; /* C^v u ff0b */ }
+#codeshell button.kill:after { content: " ╳ "; /* C^v u 2573 */ }
+div.svg {
+    position: relative;
+}
+div.svg div.kill {
+    display: none;
+}
+div.svg div.kill {
+    display: block;
+    position: absolute;
+    border-radius: 3px;
+    right: 5px;
+    top: 5px;
+    padding: 3px;
+    background: #c44;
+    color: white;
+    cursor: pointer;
+}
+

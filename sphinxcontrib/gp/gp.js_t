@@ -1,0 +1,152 @@
+/* adapted from Bill Allombert's "Pari in your browser" */
+var gp_script_url = "{{ gp_js_path }}/gp-sta.js";
+var gp_mem_url = "{{ gp_js_path }}/gp-sta.js.mem";
+var currBlock = document.body;
+var currPrint = undefined;
+
+function shiftenter(pre) {
+  if (event.keyCode == 13 && event.shiftKey)
+  {
+     event.preventDefault();
+     gpeval(pre);
+  }
+}
+
+function cvtohtml(s) {
+    s = s.replace(/&/g, "&amp;");
+    s = s.replace(/</g, "&lt;");
+    s = s.replace( />/g, "&gt;");
+    s = s.replace('\n', '<br>', 'g');
+    return s;
+}
+function htmltocv(s) {
+    // normally useless if smartypants is disabled
+    s = s.replace(/&#8220;/g, '"');
+    s = s.replace(/&#8221;/g, '"');
+    s = s.replace(/&#8216;/g, "'");
+    s = s.replace(/&#8217;/g, "'");
+    s = s.replace(/&amp;/g, "&");
+    s = s.replace(/&lt;/g, "<");
+    s = s.replace(/&gt;/g, ">");
+    s = s.replace(/<div>/gi,'');
+    s = s.replace(/<\/div>/gi,'');
+    return s;
+}
+function findOutputBlock(shell,id) {
+    var out;
+    if (!shell)
+        shell = currBlock;
+    out = shell.querySelector("#"+id);
+    if (!out)
+    {
+        out = document.createElement('pre');
+        out.id = id;
+        let div = document.createElement('div');
+        div.appendChild(out);
+        addkillbutton(div);
+        shell.appendChild(div);
+    }
+    return out;
+}
+function clearcell(where) {
+  if(where) where.parentNode.removeChild(where);
+}
+function addkillbutton(where) {
+    var kill = document.createElement('button');
+    kill.onclick = function() { return clearcell(where)};
+    kill.setAttribute("class", "kill");
+    where.appendChild(kill);
+}
+//  <div id="codeshell">
+//  <div class="eval" onclick="return gpeval(this)">&eacute;valuer</div>
+//  <pre class="highlight-gp code" id="input"
+//       contenteditable="true" ondblclick="return gpeval(this)">"""
+
+function clearcontent(parent,id) {
+  let div = parent.querySelector("#"+id);
+  if (div) {
+    div.innerHTML = "";
+    div.classList.remove("done");
+  }
+}
+function removecontent(parent,id) {
+  let div = parent.querySelector("#"+id);
+  if (div) parent.removeChild(div.parentNode);
+}
+function newcell(where) {
+    var shell = where.parentNode;
+    var clone = shell.cloneNode(true);
+    clearcontent(clone,"input");
+    removecontent(clone,"output");
+    removecontent(clone,"print");
+    shell.parentNode.insertBefore(clone, shell.nextSibling);
+}
+function newsvg(text)
+{
+      let currsvg = document.createElement('div');
+      currsvg.setAttribute("class", "svg");
+      currsvg.innerHTML = text;
+      //addkillbutton(currsvg);
+      currBlock.appendChild(currsvg);
+}
+function myprint(text)
+{
+    if (text.slice(0, 4) == "<svg")
+        newsvg(text);
+    else {
+      let block = findOutputBlock(currBlock,"print");
+      block.innerHTML += text+"\n";
+    }
+}
+
+var Module =
+{
+    noInitialRun: true,
+    print: myprint,
+    printErr: myprint
+};
+(function() {
+    var xhr = Module['memoryInitializerRequest'] = new XMLHttpRequest();
+    xhr.open('GET', gp_mem_url, true);
+    xhr.responseType = 'arraybuffer';
+    xhr.send(null);
+})();
+function myevalm(s) { return Module.ccall("gp_embedded","string",["string"],[s]); }
+function myinit() { Module.ccall("gp_embedded_init",null,["number","number"],[4000000,1000000000]); }
+function myplotinit() { Module.ccall("pari_emscripten_plot_init",null,["number","number"],[640,480]); }
+var initonce = true;
+function gpeval(where) {
+    if (initonce) { myinit(); myplotinit(); initonce = false; }
+    var block = where.parentNode;
+    currBlock = block;
+    currPrint = block.querySelector("#print");
+    var input = block.querySelector("#input");
+    var cmd = input.textContent;
+    cmd = htmltocv(cmd);
+    var s = myevalm(cmd);
+    if (s == "retry.")
+    {
+        setTimeout(function (){ gpeval(where); }, 500);
+    }
+    else if (s.slice(0,6) == "Help: ")
+    {
+        var url = s.slice(6,-1);
+        window.open(url);
+    }
+    else if (s.length> 1)
+    {
+        var out = findOutputBlock(block, "output");
+        var t = cvtohtml(s);
+        var c = s.charAt(0);
+        if (c != "%" && c != "\n")
+        {
+            t = "<em style=\"color: red\">*** " + t + "</em>\n";
+        }
+        out.innerHTML += t;
+    }
+    input.className += ' done';
+}
+
+var script = document.createElement('script');
+script.src = gp_script_url;
+document.head.appendChild(script);
