@@ -149,4 +149,5 @@ function gpeval(where) {
 
 var script = document.createElement('script');
 script.src = gp_script_url;
+script.async = "true";
 document.head.appendChild(script);
