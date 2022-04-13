@@ -1,6 +1,10 @@
 /* adapted from Bill Allombert's "Pari in your browser" */
-var gp_script_url = "{{ gp_js_path }}/gp-sta.js";
-var gp_mem_url = "{{ gp_js_path }}/gp-sta.js.mem";
+
+var script = document.createElement('script');
+script.src = '{{ gp_js_path }}/gp-sta.js';
+script.async = "true";
+document.head.appendChild(script);
+
 var currBlock = document.body;
 var currPrint = undefined;
 
@@ -98,19 +102,17 @@ function myprint(text)
       block.innerHTML += text+"\n";
     }
 }
-
+function myprinterr(text)
+{
+  currPrint.innerHTML += cvtohtml(text)+"\n";
+}
 var Module =
 {
-    noInitialRun: true,
-    print: myprint,
-    printErr: myprint
+  noInitialRun: true,
+  print: myprint,
+  printErr: myprinterr,
+  wasmBinaryFile: '{{ gp_js_path }}/gp-sta.wasm'
 };
-(function() {
-    var xhr = Module['memoryInitializerRequest'] = new XMLHttpRequest();
-    xhr.open('GET', gp_mem_url, true);
-    xhr.responseType = 'arraybuffer';
-    xhr.send(null);
-})();
 function myevalm(s) { return Module.ccall("gp_embedded","string",["string"],[s]); }
 function myinit() { Module.ccall("gp_embedded_init",null,["number","number"],[4000000,1000000000]); }
 function myplotinit() { Module.ccall("pari_emscripten_plot_init",null,["number","number"],[640,480]); }
@@ -147,7 +149,3 @@ function gpeval(where) {
     input.className += ' done';
 }
 
-var script = document.createElement('script');
-script.src = gp_script_url;
-script.async = "true";
-document.head.appendChild(script);

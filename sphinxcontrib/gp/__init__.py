@@ -167,10 +167,10 @@ def setup(app):
                         latex=(visit_latex, depart_latex))
     app.add_node(xcaseval, html=(visit_xcaseval_html, depart_html))
 
-    app.add_config_value('gp_version', '2.12', False)
+    app.add_config_value('gp_version', '2.14', False)
     # if set, do not load the local gp files provided here
     app.add_config_value('gp_js_path',
-	    'https://webusers.imj-prg.fr/~pascal.molin/static/gp.2.12',
+	    'https://webusers.imj-prg.fr/~pascal.molin/static/gp.2.14',
 	    False)
     app.add_directive('gp', GPeval)
     app.add_directive('xcas', Xcaseval)
