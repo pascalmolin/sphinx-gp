@@ -2,7 +2,7 @@ from docutils.nodes import literal_block
 from docutils.parsers.rst import Directive, directives
 from sphinx.util.nodes import set_source_info
 from sphinx.errors import ExtensionError
-from sphinx.util.osutil import copyfile
+from sphinx.util.osutil import ensuredir, copyfile
 import os, shutil
 from tempfile import mkdtemp
 
@@ -98,6 +98,7 @@ def setup_static_path(app):
     app._gpcode_static_path = mkdtemp()
     if app._gpcode_static_path not in app.config.html_static_path:
         app.config.html_static_path.append(app._gpcode_static_path)
+    logger.info(f'html_static_path = {app.config.html_static_path}')
 
 def copy_contrib_file(app, file_name):
     pwd = os.path.abspath(os.path.dirname(__file__))
@@ -106,6 +107,7 @@ def copy_contrib_file(app, file_name):
     if os.path.exists(source+'_t'):
         source += '_t'
         dest += '_t'
+    ensuredir(os.path.dirname(dest))
     copyfile(source, dest)
 
 def builder_inited(app):
@@ -113,11 +115,7 @@ def builder_inited(app):
     filename_css = 'evalcode.css'
     filename_js = 'gp.js'
     
-    # optional
-    filename_gpjs = 'gp-sta.js'
-    filename_gpmem = 'gp-sta.js.mem'
-
-
+    
     # Sphinx 1.8 renamed `add_stylesheet` to `add_css_file`
     # and `add_javascript` to `add_js_file`.
     # Sphinx 4.0 finally removed `add_stylesheet` and `add_javascript`.
@@ -133,30 +131,29 @@ def builder_inited(app):
     copy_contrib_file(app, filename_css)
     add_css(filename_css)
 
-
-    #static_url = 'https://webusers.imj-prg.fr/~pascal.molin/static/gp@{version}/'.format(
-    #    version=app.config.gp_version)
-    #
-    #add_js(static_url + 'gp-sta.js')
-
-    # add this path to html_context, so that it is available in template
-    app.config.html_context['gp_js_path'] = app.config.gp_js_path
-
-    #if not (app.config.gpcode_js_path):
-    #    raise ExtensionError('GP paths not set')
-    #if app.config.gp_js_path:
-    #    add_js(app.config.gp_js_path)
-    #    logger.warning('using gp files %s'%app.config.gp_js_path)
-    #    logger.warning('make sure files are correctly deployed')
-    #else:
-    #    logger.warning('using local gp files, may be outdated')
-    #    copy_contrib_file(app, filename_gpjs)
-    #    copy_contrib_file(app, filename_gpmem)
-    #    add_js(filename_gpjs)
-
     copy_contrib_file(app, filename_js)
     add_js(filename_js)
-    
+
+
+    if not (app.config.gp_js_path):
+        raise ExtensionError('GP paths not set')
+    # add this path to html_context, so that it is available in template
+    if app.config.gp_js_path != 'default':
+        #add_js(app.config.gp_js_path)
+        logger.warning('using gp files %s'%app.config.gp_js_path)
+        logger.warning('make sure files are correctly deployed')
+    else:
+        logger.warning('using local gp files, may be outdated')
+        gp_js_path = '_static'
+        app.config.gp_js_path = gp_js_path
+        pwd = os.path.abspath(os.path.dirname(__file__))
+        gp_static_path = os.path.join(pwd, gp_js_path)
+        outpath = os.path.join(app.outdir, '_static')
+        ensuredir(outpath)
+        for f in ['gp-sta.js','gp-sta.wasm']:
+            logger.info(f'copy  {gp_static_path}/{f} to {outpath}/{f}')
+            copyfile(f'{gp_static_path}/{f}', f'{outpath}/{f}')
+    app.config.html_context['gp_js_path'] = app.config.gp_js_path
 
 def builder_finished(app, exception):
     # Delete temporary dir used for _static file
@@ -169,9 +166,7 @@ def setup(app):
 
     app.add_config_value('gp_version', '2.14', False)
     # if set, do not load the local gp files provided here
-    app.add_config_value('gp_js_path',
-	    'https://webusers.imj-prg.fr/~pascal.molin/static/gp.2.14',
-	    False)
+    app.add_config_value('gp_js_path', 'default', False)
     app.add_directive('gp', GPeval)
     app.add_directive('xcas', Xcaseval)
 
