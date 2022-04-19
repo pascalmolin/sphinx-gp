@@ -10,7 +10,7 @@ from sphinx.util import logging
 logger = logging.getLogger(__name__)
 logger.info('loading extension %s'%__name__)
 
-__version__ = '0.0.1'
+__version__ = '0.1.0'
 
 class codeeval(literal_block): pass
 class gpeval(literal_block): pass
@@ -110,30 +110,14 @@ def copy_contrib_file(app, file_name):
     ensuredir(os.path.dirname(dest))
     copyfile(source, dest)
 
+filename_css = 'evalcode.css'
+filename_js = 'gp.js'
 def builder_inited(app):
-
-    filename_css = 'evalcode.css'
-    filename_js = 'gp.js'
-    
-    
-    # Sphinx 1.8 renamed `add_stylesheet` to `add_css_file`
-    # and `add_javascript` to `add_js_file`.
-    # Sphinx 4.0 finally removed `add_stylesheet` and `add_javascript`.
-    old_css_add = getattr(app, 'add_stylesheet', None)
-    old_js_add = getattr(app, 'add_javascript', None)
-    add_css = getattr(app, 'add_css_file', old_css_add)
-    add_js = getattr(app, 'add_js_file', old_js_add)
-
     # Ensure the static path is setup to hold KaTeX CSS and autorender files
     setup_static_path(app)
-
     # custom js and CSS
     copy_contrib_file(app, filename_css)
-    add_css(filename_css)
-
     copy_contrib_file(app, filename_js)
-    add_js(filename_js)
-
 
     if not (app.config.gp_js_path):
         raise ExtensionError('GP paths not set')
@@ -154,6 +138,17 @@ def builder_inited(app):
             logger.info(f'copy  {gp_static_path}/{f} to {outpath}/{f}')
             copyfile(f'{gp_static_path}/{f}', f'{outpath}/{f}')
     app.config.html_context['gp_js_path'] = app.config.gp_js_path
+
+def has_gp_node(doctree):
+    if doctree is None:
+        return False
+    return any( True for _ in doctree.traverse(gpeval) )
+
+def html_page_context(app, pagename, templatename, context, doctree):
+    """ add gp if necessary for this page """
+    if has_gp_node(doctree):
+        app.add_js_file(filename_js, loading_method='async')
+        app.add_css_file(filename_css)
 
 def builder_finished(app, exception):
     # Delete temporary dir used for _static file
@@ -176,6 +171,7 @@ def setup(app):
    
     # add stylesheets after env inited
     app.connect('builder-inited', builder_inited)
+    app.connect('html-page-context', html_page_context)
     app.connect('build-finished', builder_finished)
 
     return {'version': __version__, 'parallel_read_safe': True}
