@@ -1,4 +1,8 @@
+from docutils import nodes
+from docutils.parsers.rst import Directive
+from sphinx.util.docutils import SphinxDirective
 from docutils.nodes import literal_block
+
 from docutils.parsers.rst import Directive, directives
 from sphinx.util.nodes import set_source_info
 from sphinx.errors import ExtensionError
@@ -13,6 +17,7 @@ logger.info('loading extension %s'%__name__)
 __version__ = '0.1.0'
 
 class codeeval(literal_block): pass
+class codeoutput(literal_block): pass
 class gpeval(literal_block): pass
 class xcaseval(literal_block): pass
 
@@ -42,6 +47,17 @@ def depart_html(self, node):
         </div>
         """
         )
+def visit_output_html(self, node):
+    self.body.append(
+        """
+        <div id="codeshell">
+        <button class="eval" onclick="return gpeval(this)" data-tip="run ⇧⏎"></button>
+        <pre class="highlight-gp code" id="input"
+             contenteditable="true" ondblclick="return gpeval(this)"
+             onkeydown="shiftenter(this)">"""
+        )
+
+
 def visit_latex(self, node):
   if node['notex']:
       self.body.append('\\iffalse\n')
@@ -51,11 +67,16 @@ def depart_latex(self, node):
   if node['notex']:
       self.body.append('\\fi\n')
 
-class Codeeval(Directive):
+class CodeEvalNode(nodes.General, nodes.Element):
+    pass
+
+class CodeEvalDirective(SphinxDirective):
 
     language = None
     nodeclass = None
     has_content = True
+    output_class = None
+    output_sep = None
     required_arguments = 0
     optional_arguments = 0
     final_argument_whitespace = False
@@ -64,6 +85,7 @@ class Codeeval(Directive):
             'name': directives.unchanged,
             'title': directives.unchanged,
             'notex': directives.flag,
+            'output_sep': directives.unchanged,
             }
 
     def run(self):
@@ -71,17 +93,37 @@ class Codeeval(Directive):
         code = code.replace('\\lt ','<')
         code = code.replace('\\gt ','>')
 
-        literal = self.nodeclass(code, code)
-        literal['language'] = self.language
-        literal['classes'] += self.options.get('class', [])
-        literal['title'] = self.options.get('title','code gp')
-        literal['notex'] = self.options.get('notex',False)
+        output_sep = self.options.get('output_sep',self.output_sep)
+        if (output_sep and output_set in code)
+          code, output = code.split(output_sep)
+        else output = None
 
-        set_source_info(self, literal)
+        # Créer les nœuds
+        code_node = self.codeclass(code, code)
+        code_node['language'] = self.language
+        code_node['classes'] += self.options.get('class', [])
+        code_node['title'] = self.options.get('title','code gp')
+        code_node['notex'] = self.options.get('notex',False)
+
+        output_node = nodes.literal_block(output, output)
+
+        # Envelopper les nœuds dans un nœud personnalisé
+        container = CodeOutputNode()
+        container += code_node
+        container += output_node
+
+        return [container]
+
+                set_source_info(self, literal)
 
         self.add_name(literal)
 
-        return [literal]
+        if output:
+          output = self.output_class(output, output)
+          output['language'] = self.language
+          return [literal, output]
+        else
+          return [literal]
 
 class GPeval(Codeeval):
     language = 'gp'
@@ -145,7 +187,7 @@ def has_gp_node(doctree):
     return any( True for _ in doctree.traverse(gpeval) )
 
 def html_page_context(app, pagename, templatename, context, doctree):
-    """ add gp if necessary for this page """
+    """ add gp only if necessary for this page """
     if has_gp_node(doctree):
         app.add_js_file(filename_js, loading_method='async')
         app.add_css_file(filename_css)
