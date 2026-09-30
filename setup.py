@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 import io
 def readfile(filename):
@@ -35,9 +35,8 @@ setup(
         'Topic :: Utilities',
     ],
     platforms='any',
-    packages=find_packages(),
+    packages=find_namespace_packages(include=['sphinxcontrib*']),
     include_package_data=True,
     python_requires='>=3.5',
     install_requires=requires,
-    namespace_packages=['sphinxcontrib'],
 )
